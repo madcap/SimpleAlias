@@ -30,3 +30,5 @@ Version 0.2.0
 	Fixed stupidly long constructor warning.
 Version 0.1.0
 	Release
+
+.
