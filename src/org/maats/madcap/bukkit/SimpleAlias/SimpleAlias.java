@@ -7,19 +7,17 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.Properties;
 
-import org.bukkit.Server;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.Event.Priority;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginDescriptionFile;
-import org.bukkit.plugin.PluginLoader;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.util.config.Configuration;
+
+import com.nijiko.permissions.PermissionHandler;
+import com.nijikokun.bukkit.Permissions.Permissions;
 
 
 /**
@@ -29,19 +27,24 @@ import org.bukkit.util.config.Configuration;
  */
 public class SimpleAlias extends JavaPlugin {
 	private final SimpleAliasPlayerListener playerListener = new SimpleAliasPlayerListener(this);
-	private final SimpleAliasBlockListener blockListener = new SimpleAliasBlockListener(this);
+	//private final SimpleAliasBlockListener blockListener = new SimpleAliasBlockListener(this);
+	
 	private final HashMap<Player, Boolean> debugees = new HashMap<Player, Boolean>();
 
 	private File dataDir;
 	private final String ALIASES_FILE = "aliases.txt";
 	private final String YML_FILE = "alias_config.yml";
-	protected List<String> bannedAliases;
+	protected List<String> bannedAliases = null;
 	private Configuration config;
 	protected File playerDir;
 	private Properties props;
 	
 	// store a mapping of names->aliases
 	protected HashMap<String, String> names = new HashMap<String, String>();
+	
+	// permissions plugin use
+	protected static PermissionHandler permissions = null;
+	protected PermissionsListener permListener = new PermissionsListener(this);
 	
 	protected static void print(String s){
 		System.out.println("SimpleAlias: "+s);
@@ -69,7 +72,8 @@ public class SimpleAlias extends JavaPlugin {
 		// register events
 		PluginManager pm = getServer().getPluginManager();
 		pm.registerEvent(Event.Type.PLAYER_JOIN, playerListener, Priority.Normal, this);
-		//pm.registerEvent(Event.Type.PLAYER_COMMAND_PREPROCESS, playerListener, Priority.Lowest, this);
+		pm.registerEvent(Event.Type.PLAYER_COMMAND_PREPROCESS, playerListener, Priority.Lowest, this);
+		pm.registerEvent(Event.Type.PLUGIN_ENABLE, permListener, Priority.Low, this);
 
 		// print startup message
 		PluginDescriptionFile pdfFile = this.getDescription();
@@ -95,10 +99,33 @@ public class SimpleAlias extends JavaPlugin {
 			// load config yml file
 			config = new Configuration(configFile);
 			config.load();
-			bannedAliases = config.getStringList("banned-aliaes", null);
+			bannedAliases = config.getStringList("banned-aliases", null);
 			//print("Configuration file "+YML_FILE+" loaded successfully.");
-		}
 			
+			// if the list in the config file doesn't exist, banned Aliases is actually an empty list, set to null instead
+			if(bannedAliases.isEmpty())
+				bannedAliases = null;
+			
+			// backwards compatible for spelling error in earlier version
+			if(bannedAliases == null){
+				bannedAliases = config.getStringList("banned-aliaes", null);
+				if(bannedAliases.isEmpty())
+					bannedAliases = null;
+				
+				// revisit this some day
+//				if(bannedAliases != null){
+//					// they are using an old version where there is a typo in the config file
+//					// replace it
+//					// this actually clobbers the entire file, no harm since banned aliases are only contents
+//					// will need to change this if we ever store more stuff in config file
+//					config.removeProperty("banned-aliaes");
+//					config.setProperty("banned-aliases", bannedAliases);
+//					config.save();
+//				}
+
+			}
+		}
+
 		// check for aliases file
 		File aliasFile = new File(dataDir.getAbsolutePath() + File.separator + ALIASES_FILE);
 		if(!aliasFile.exists())
@@ -120,15 +147,32 @@ public class SimpleAlias extends JavaPlugin {
 		else
 			print("Alias file could not be loaded.");
 
+		// check for permissions plugin:
+		// http://forums.bukkit.org/threads/5974
+		
+		// it could already be enabled
+		Plugin permPlugin = this.getServer().getPluginManager().getPlugin("Permissions");
+		if (permPlugin != null && permPlugin.isEnabled()) {
+			SimpleAlias.permissions = (PermissionHandler) ((Permissions) permPlugin).getHandler();
+			print("Permissions plugin is enabled, using permission node SimpleAlias.* for access to /alias.");
+        }
+		
 	}
 	
 	public void onDisable() {
+		
+		// make sure we don't attempt to use permissions any more
+		permissions = null;
+		
 		// save aliases to aliases file
 		if(saveAliases())
 			print("Aliases written to file.");
 		else
 			print("Aliases could not be writtren to file.");
 
+		names = null;
+		bannedAliases = null;
+		
 		print("Plugin shutting down.");
 	}
 
@@ -163,6 +207,7 @@ public class SimpleAlias extends JavaPlugin {
 		}
 		catch (Exception ex)
 		{
+			names = null;
 			return false;
 		}
 	}
@@ -186,6 +231,46 @@ public class SimpleAlias extends JavaPlugin {
 			return false;
 		}
 	}	
+
+	
+	// check alias against all names in the world/players directory
+	protected boolean isPlayerName(String alias){
+
+		String loginName;
+		String[] playerArray = this.playerDir.list();
+		for (int i=0; i<playerArray.length; i++){
+			//print(playerArray[i]);
+
+			loginName = playerArray[i];
+
+			// trim off .dat
+			loginName = loginName.replaceAll("\\.dat", "");
+
+			if(alias.compareToIgnoreCase(loginName)==0){
+				return true;
+			}
+		}
+		
+		return false;
+	}
+	
+	
+	// check alias against list of banned aliases in config file
+	protected boolean isBanned(String alias){
+		Iterator<String> it;
+		String notAllowed;
+		if(this.bannedAliases!=null){
+			it = this.bannedAliases.iterator();
+			while (it.hasNext()){
+				notAllowed=(String) it.next();
+				if(alias.compareToIgnoreCase(notAllowed)==0){
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+			
 
 }
 

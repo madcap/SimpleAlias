@@ -1,6 +1,6 @@
 name: SimpleAlias
 main: org.maats.madcap.bukkit.SimpleAlias.SimpleAlias
-version: 0.2.1
+version: 1.0.0
 commands:
   alias:
     description: Allows you to set an alias.

@@ -1,13 +1,9 @@
 package org.maats.madcap.bukkit.SimpleAlias;
 
-import java.util.Iterator;
-
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-
-
 
 
 
@@ -35,7 +31,15 @@ public class AliasCommand implements CommandExecutor {
 
 			player = (Player)sender;
 			name=player.getName();
-						
+
+			if(SimpleAlias.permissions != null){
+				// if permissions is not null, look in the node SimpleAlias.*
+				if (!SimpleAlias.permissions.has(player, "SimpleAlias.*")) {
+					player.sendMessage("You do not have permission to use "+commandLabel+".");
+					return true;
+				}
+			}
+
 			// no args means clear any aliases			
 			if(args.length==0)
 			{
@@ -63,42 +67,27 @@ public class AliasCommand implements CommandExecutor {
 				
 				// make sure that alias isn't already in use (either as an alias or full login name)
 				if(plugin.names.containsValue(alias)){
+					// special case, if that player is already using that alias
+					if(plugin.names.get(name).equalsIgnoreCase(alias)){
+						player.sendMessage("Alias Failure: You are already using "+alias+" as an alias.");
+						return true;
+					}
+					
+					// otherwise, it's in use by someone else
 					player.sendMessage("Alias Failure: That alias is already in use.");
 					return true;
 				} 
 
 				// make sure no one has that alias as a login  name
-				if(plugin.playerDir!=null && plugin.playerDir.exists()){
-
-					String loginName;
-					String[] playerArray = plugin.playerDir.list();
-					for (int i=0; i<playerArray.length; i++){
-						//print(playerArray[i]);
-						
-						loginName = playerArray[i];
-						
-						// trim off .dat
-						loginName = loginName.replaceAll("\\.dat", "");
-					
-						if(alias.compareToIgnoreCase(loginName)==0){
-							player.sendMessage("Alias Failure: You are not allowed to use that alias.");
-							return true;
-						}
-					}
+				if(plugin.playerDir!=null && plugin.playerDir.exists() && plugin.isPlayerName(alias)){
+					player.sendMessage("Alias Failure: You are not allowed to use that alias.");
+					return true;
 				}
 				
 				// check alias against list of banned aliases in config file
-				Iterator it;
-				String notAllowed;
-				if(plugin.bannedAliases!=null){
-					it = plugin.bannedAliases.iterator();
-					while (it.hasNext()){
-						notAllowed=(String) it.next();
-						if(alias.compareToIgnoreCase(notAllowed)==0){
-							player.sendMessage("Alias Failure: You are not allowed to use that alias.");
-							return true;
-						}
-					}
+				if(plugin.isBanned(alias)){
+					player.sendMessage("Alias Failure: You are not allowed to use that alias.");
+					return true;
 				}
 				
 				// only alphanumeric aliases are allowed for now
