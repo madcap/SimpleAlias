@@ -1,6 +1,6 @@
 package org.maats.madcap.bukkit.SimpleAlias;
 
-import org.bukkit.event.server.PluginEvent;
+import org.bukkit.event.server.PluginEnableEvent;
 import org.bukkit.event.server.ServerListener;
 import org.bukkit.plugin.Plugin;
 
@@ -18,10 +18,10 @@ public class PermissionsListener extends ServerListener {
         mainPlugin = thisPlugin;
     }
 
-    @Override
-    public void onPluginEnabled(PluginEvent event) {
+    public void onPluginEnable(PluginEnableEvent event) {
     	// if permissions gets enabled, set it for usage in the main plugin
     	String pluginName = event.getPlugin().getDescription().getName();
+    	//SimpleAlias.print("calling onPluginEnabled for: "+pluginName);
     	if(pluginName.equals("Permissions")){
     		Plugin permPlugin = event.getPlugin();
     		if (permPlugin != null && permPlugin.isEnabled()) {
@@ -31,7 +31,7 @@ public class PermissionsListener extends ServerListener {
         }
     }
 
-    public void onPluginDisabled(PluginEvent event) {
+    public void onPluginDisabled(PluginEnableEvent event) {
             String pluginName = event.getPlugin().getDescription().getName();
         	if(pluginName.equals("Permissions")){
         		Plugin permPlugin = event.getPlugin();

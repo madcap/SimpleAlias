@@ -15,6 +15,7 @@ public class DelaySetDisplayName implements Runnable
 	
 	public void run()
 	{
-		player.setDisplayName(player.getName());
+		if(player.isOnline())
+			player.setDisplayName(player.getName());
 	}
 }

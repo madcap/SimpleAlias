@@ -31,16 +31,16 @@ public class SimpleAlias extends JavaPlugin {
 	
 	private final HashMap<Player, Boolean> debugees = new HashMap<Player, Boolean>();
 
-	private File dataDir;
-	private final String ALIASES_FILE = "aliases.txt";
-	private final String YML_FILE = "alias_config.yml";
+	protected File dataDir = null;
+	protected final String ALIASES_FILE = "aliases.txt";
 	protected List<String> bannedAliases = null;
-	private Configuration config;
-	protected File playerDir;
-	private Properties props;
+	protected File playerDir = null;
+	protected Properties props = null;
+	protected final String CONFIG_FILE = "alias_config.yml";
+	protected Configuration config = null;
 	
 	// store a mapping of names->aliases
-	protected HashMap<String, String> names = new HashMap<String, String>();
+	protected HashMap<String, String> names = null;
 	
 	// permissions plugin use
 	protected static PermissionHandler permissions = null;
@@ -53,6 +53,7 @@ public class SimpleAlias extends JavaPlugin {
 
 	public void onEnable() {
 		
+		// set up a command executor for the /alias command
 		getCommand("alias").setExecutor(new AliasCommand(this));
 		
 		// get server properties so we can get the players dir
@@ -71,29 +72,27 @@ public class SimpleAlias extends JavaPlugin {
 		
 		// register events
 		PluginManager pm = getServer().getPluginManager();
-		pm.registerEvent(Event.Type.PLAYER_JOIN, playerListener, Priority.Normal, this);
+		pm.registerEvent(Event.Type.PLAYER_JOIN, playerListener, Priority.Monitor, this);
 		pm.registerEvent(Event.Type.PLAYER_COMMAND_PREPROCESS, playerListener, Priority.Lowest, this);
-		pm.registerEvent(Event.Type.PLUGIN_ENABLE, permListener, Priority.Low, this);
-
-		// print startup message
-		PluginDescriptionFile pdfFile = this.getDescription();
-		System.out.println( pdfFile.getName() + " version " + pdfFile.getVersion() + " is enabled." );
+		pm.registerEvent(Event.Type.PLUGIN_ENABLE, permListener, Priority.Monitor, this);
 		
 		this.dataDir = this.getDataFolder();
 		
 		// check for this plugin's data directory
 		if(!dataDir.exists())
 		{
-			print("Plugin data folder folder is missing, creating "+dataDir.getAbsolutePath());
+			print("Plugin data folder is missing, creating "+dataDir.getAbsolutePath());
 			dataDir.mkdir();
 		}
 		
 		// check for yml file
-		File configFile = new File(dataDir.getAbsolutePath() + File.separator + YML_FILE);
+		File configFile = new File(dataDir.getAbsolutePath() + File.separator + CONFIG_FILE);
 		if(!configFile.exists()){
-			print("Configuration file "+YML_FILE+" is missing!");
+			print("Configuration file "+CONFIG_FILE+" is missing!");
 			config = null;
 			bannedAliases = null;
+			
+			// TODO make the config file
 		}
 		else{
 			// load config yml file
@@ -111,21 +110,12 @@ public class SimpleAlias extends JavaPlugin {
 				bannedAliases = config.getStringList("banned-aliaes", null);
 				if(bannedAliases.isEmpty())
 					bannedAliases = null;
-				
-				// revisit this some day
-//				if(bannedAliases != null){
-//					// they are using an old version where there is a typo in the config file
-//					// replace it
-//					// this actually clobbers the entire file, no harm since banned aliases are only contents
-//					// will need to change this if we ever store more stuff in config file
-//					config.removeProperty("banned-aliaes");
-//					config.setProperty("banned-aliases", bannedAliases);
-//					config.save();
-//				}
-
 			}
 		}
 
+		// set up a new place to hold aliases
+		names = new HashMap<String, String>();
+		
 		// check for aliases file
 		File aliasFile = new File(dataDir.getAbsolutePath() + File.separator + ALIASES_FILE);
 		if(!aliasFile.exists())
@@ -147,15 +137,26 @@ public class SimpleAlias extends JavaPlugin {
 		else
 			print("Alias file could not be loaded.");
 
+		
+		// it's possible this plugin was disabled, 
+		// players joined that should have gotten aliases, 
+		// then the plugin was re-enabled
+		// these player need to have their aliases updated
+		// TODO implement this
+		
+		
 		// check for permissions plugin:
 		// http://forums.bukkit.org/threads/5974
-		
 		// it could already be enabled
 		Plugin permPlugin = this.getServer().getPluginManager().getPlugin("Permissions");
 		if (permPlugin != null && permPlugin.isEnabled()) {
 			SimpleAlias.permissions = (PermissionHandler) ((Permissions) permPlugin).getHandler();
 			print("Permissions plugin is enabled, using permission node SimpleAlias.* for access to /alias.");
         }
+		
+		// print startup message
+		PluginDescriptionFile pdfFile = this.getDescription();
+		System.out.println( pdfFile.getName() + " version " + pdfFile.getVersion() + " is enabled." );
 		
 	}
 	
@@ -172,6 +173,10 @@ public class SimpleAlias extends JavaPlugin {
 
 		names = null;
 		bannedAliases = null;
+		playerDir = null;
+		dataDir = null;
+		props = null;
+		config = null;
 		
 		print("Plugin shutting down.");
 	}
@@ -191,8 +196,9 @@ public class SimpleAlias extends JavaPlugin {
 	protected boolean loadAliases(){
 		// load aliases from file
 		try
-		{
-			BufferedReader reader = new BufferedReader(new FileReader((dataDir.getAbsolutePath() + File.separator + ALIASES_FILE)));
+		{	
+			FileReader fr = new FileReader((dataDir.getAbsolutePath() + File.separator + ALIASES_FILE));
+			BufferedReader reader = new BufferedReader(fr);
 			String line = reader.readLine();
 			while ( line != null )
 			{
@@ -203,6 +209,8 @@ public class SimpleAlias extends JavaPlugin {
 				}
 				line = reader.readLine();
 			}
+			reader.close();
+			fr.close();
 			return true;
 		}
 		catch (Exception ex)
@@ -217,17 +225,20 @@ public class SimpleAlias extends JavaPlugin {
 		// write aliases to file
 		try
 		{
-			BufferedWriter writer = new BufferedWriter(new FileWriter((dataDir.getAbsolutePath() + File.separator + ALIASES_FILE)));
+			FileWriter fw = new FileWriter(dataDir.getAbsolutePath() + File.separator + ALIASES_FILE);
+			BufferedWriter writer = new BufferedWriter(fw);
 			for ( Entry<String, String> entry : names.entrySet() )
 			{
 				writer.write(entry.getKey() + "=" + entry.getValue());
 				writer.newLine();
 			}
 			writer.close();
+			fw.close();
 			return true;
 		}
 		catch (Exception ex)
 		{
+			//ex.printStackTrace();
 			return false;
 		}
 	}	
@@ -236,21 +247,22 @@ public class SimpleAlias extends JavaPlugin {
 	// check alias against all names in the world/players directory
 	protected boolean isPlayerName(String alias){
 
-		String loginName;
-		String[] playerArray = this.playerDir.list();
-		for (int i=0; i<playerArray.length; i++){
-			//print(playerArray[i]);
+		if(playerDir != null && playerDir.exists()){
+			String loginName;
+			String[] playerArray = this.playerDir.list();
+			for (int i=0; i<playerArray.length; i++){
+				//print(playerArray[i]);
 
-			loginName = playerArray[i];
+				loginName = playerArray[i];
 
-			// trim off .dat
-			loginName = loginName.replaceAll("\\.dat", "");
+				// trim off .dat
+				loginName = loginName.replaceAll("\\.dat", "");
 
-			if(alias.compareToIgnoreCase(loginName)==0){
-				return true;
+				if(alias.compareToIgnoreCase(loginName)==0){
+					return true;
+				}
 			}
 		}
-		
 		return false;
 	}
 	

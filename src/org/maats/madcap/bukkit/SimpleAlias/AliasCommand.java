@@ -15,7 +15,7 @@ public class AliasCommand implements CommandExecutor {
 		this.plugin = plugin;
 	}
 	
-	public boolean onCommand(CommandSender sender, Command cmd, String commandLabel,	String[] args) {
+	public boolean onCommand(CommandSender sender, Command cmd, String commandLabel, String[] args) {
 		
 		Player player = null;
 		String name = "";

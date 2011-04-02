@@ -1,28 +1,45 @@
+[CHAT] SimpleAlias v1.0.1 Chat name aliases [cb612]
+
 Simple Alias
+
+[url=http://dl.dropbox.com/u/1660511/SimpleAlias/SimpleAlias.zip]Download[/url]
+[url=https://github.com/madcap/SimpleAlias]Source[/url]
+[url=http://dl.dropbox.com/u/1660511/SimpleAlias/SimpleAlias.jar]Latest Jar Only[/url]
+
+
+[color=red]If you have used an older version, please update to the latest config file.[/color]
 
 SimpleAlias will allow players to give themselves an alias (nickname) that displays when they use chat.
 
 For Example, my login name is madcap_magician. By using the command `/alias Madcap` now whenever I use chat I will appear as Madcap.
 
-You can clear your alias by issuing the `/alias` command with no arguments.
+You can clear your alias by issuing the `/alias` command with no arguments. The command /nickname behaves the same way and you should use that command instead if you have other plugins that use the /alias command. 
 
-Aliases are currently limited to 12 characters, must be only 1 word and must be alphanumeric. Aliases are stored locally in a flat file. Aliases in player submitted commands are automatically replaced with the full player name. All alias activity is logged in case of miss-use.
+[b]Features[/b]
+* Persistance - Aliases are saved to a file between server restarts.
+* Command Replacement - Player issued commands containing asliases are automatically replaced with full names.
+* Alias Blacklist - Server admins can specify names players can't use such as "Notch" and "Admin".
+* Permissions Support - Only Players you allow can use this the /alias command.
+* Security - players can not use the name of another player as their alias.
 
-The plugin now uses alias_config.yml in the plugin's data folder. It will work without this file but some features won't exist. In the YML file you can specify a list of names which are not allowed for aliases. I've provided a few already.
+Aliases are currently limited to 12 characters, must be only 1 word and must be alphanumeric. All alias activity is logged in case of miss-use.
+
+The plugin now uses alias_config.yml in the plugin's data folder. It will work without this file but the blacklist feature won't work. In the YML file you can specify a list of names which are not allowed for aliases. I've provided a few already. The config file will be automatically updated when it is revised but your changes will not be over-written.
 
 Sample config file:
-
-## list any names here that you do not want your players using (not case sensitive)
+[CODE]## list any names here that you do not want your players using (not case sensitive)
 banned-aliases:
   - "notch"
   - "admin"
   - "administrator"
   - "server"
+  - "console"[/CODE]
   
   
+[b]Permissions Support[/b]
 This plugin now supports the Permissions plugin (http://forums.bukkit.org/threads/5974). If the permissions plugin exists and is enabled then the node 'SimpleAlias.*' is required for access to the /alias command, otherwise all players will have access to the /alias command.
 Here is an example granting permission to use /alias to the 'Players' group:
-
+[CODE]
     Players:
         default: false
         info:
@@ -31,20 +48,25 @@ Here is an example granting permission to use /alias to the 'Players' group:
             build: true
         inheritance:
         permissions:
-            - 'SimpleAlias.*'
+            - 'SimpleAlias.*'[/CODE]
 
 
+[color=red]When reporting a bug, don't just say it broke. Be specific.[/color]
   
 Changelog:
-Version 1.0.0
-	Added support for permissions
-	Player issued commands containing aliases are automatically translated into full login names
-Version 0.2.1
-	Changed yml file to no longer require a world directory (now it comes from server.properties).
-Version 0.2.0
-	Added checking alias name against player login names.
-	Added list of aliases players aren't allowed to use (such as Notch, Admin etc).
-	Added .yml file for plugin configuration.
-	Fixed stupidly long constructor warning.
-Version 0.1.0
-	Release
+1.0.1
+* Changed PLAYER_JOIN priority to prevent conflicts with Essentials plugin
+* Added command /nickname to deal with command name conflict on CommandHelper plugin
+* updates for CB612
+1.0.0
+* Added support for permissions
+* Player issued commands containing aliases are automatically translated into full login names
+0.0.3
+* Changed yml file to no longer require a world directory (now it comes from server.properties).
+0.0.2
+* Added checking alias name against player login names.
+* Added list of aliases players aren't allowed to use (such as Notch, Admin etc).
+* Added .yml file for plugin configuration.
+* Fixed stupidly long constructor warning.
+0.0.1
+* Release

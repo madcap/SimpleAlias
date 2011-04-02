@@ -3,8 +3,8 @@ package org.maats.madcap.bukkit.SimpleAlias;
 import java.util.Map;
 
 import org.bukkit.entity.*;
-import org.bukkit.event.player.PlayerChatEvent;
-import org.bukkit.event.player.PlayerEvent;
+import org.bukkit.event.player.PlayerCommandPreprocessEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerListener;
 
 
@@ -24,8 +24,12 @@ public class SimpleAliasPlayerListener extends PlayerListener {
 	}    
 
 	@Override
-    public void onPlayerJoin(PlayerEvent event) {
+    public void onPlayerJoin(PlayerJoinEvent event) {
     	// when a player joins, if they have an alias set, update their display name
+		
+		if(plugin.names == null)
+			return;
+		
         Player player = event.getPlayer();
         String alias = plugin.names.get(player.getName());
             
@@ -35,7 +39,7 @@ public class SimpleAliasPlayerListener extends PlayerListener {
         	// this could happen if a player sets their alias and then a player with that
         	// actual name joins the server for the first time later
         	// or the name was added to the banned aliases list after being set by the player
-        	if((plugin.playerDir!=null && plugin.playerDir.exists() && plugin.isPlayerName(alias)) || plugin.isBanned(alias)){
+        	if((plugin.isPlayerName(alias)) || plugin.isBanned(alias)){
         		plugin.names.remove(player.getName());
         		plugin.saveAliases();
         		//plugin.getServer().broadcastMessage("Player "+player.getName()+" is no longer using an alias.");
@@ -45,8 +49,8 @@ public class SimpleAliasPlayerListener extends PlayerListener {
         		// this doesn't work if you call it too early, set up a delay to change the display name
         		//player.setDisplayName(player.getName());
         		
-        		// 20 ticks is aprox 1 second
-        		plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new DelaySetDisplayName(player), 60);
+        		// 40 ticks is aprox 2 seconds
+        		plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new DelaySetDisplayName(player), 40);
         	}
         	
 			if(SimpleAlias.permissions == null){
@@ -68,11 +72,12 @@ public class SimpleAliasPlayerListener extends PlayerListener {
 				}
 			}
         }
+        
     }
 
 	
 	@Override
-	public void onPlayerCommandPreprocess(PlayerChatEvent event){
+	public void onPlayerCommandPreprocess(PlayerCommandPreprocessEvent event){
 		
 		String newCmd = "";
 		
@@ -124,6 +129,7 @@ public class SimpleAliasPlayerListener extends PlayerListener {
 				// this doesn't actually work like it should
 				//event.setMessage(newCmd);
 				
+				// use this instead
 				event.setCancelled(true);
 				player.chat(newCmd);
 
